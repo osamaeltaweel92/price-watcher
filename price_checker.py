@@ -6,16 +6,30 @@ CHAT_ID   = os.getenv("CHAT_ID")
 URL       = os.getenv("HOTEL_URL")
 
 def send(msg):
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": msg}
-    )
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            data={"chat_id": CHAT_ID, "text": msg}
+        )
+    except Exception as e:
+        print("Error sending message:", e)
 
-html = requests.get(URL, headers={"User-Agent":"Mozilla/5.0"}).text
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+}
+
+html = requests.get(URL, headers=headers).text
 soup = BeautifulSoup(html, "html.parser")
 
-price_tag = soup.select_one('[data-testid="price-and-discounted-price"]')
-price = int(price_tag.text.replace("SAR","").replace(",","").strip())
+# البحث عن السعر الصحيح للفندق
+price_tag = soup.find("div", class_="bui-price-display__value")
+if not price_tag:
+    print("Error: could not find price on page")
+    exit(1)
+
+price_text = price_tag.get_text().strip().replace("EGP","").replace(",","").replace("SAR","")
+price = int(''.join(filter(str.isdigit, price_text)))
+print("Price found:", price)
 
 try:
     with open("price.json") as f:
